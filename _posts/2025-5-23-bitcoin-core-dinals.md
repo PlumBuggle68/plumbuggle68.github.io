@@ -5,8 +5,6 @@ title: Bitcoin Core-Dinals
 Ordinals In Bitcoin Core
 ----------
 
-# Building a Bitcoin Ordinals Index: A Deep Dive into Satoshi Tracking
-
 ## Introduction
 
 Bitcoin Ordinals have revolutionized how we think about individual satoshis, treating each one as a unique, trackable unit with its own history and identity. However, tracking ordinals across the Bitcoin blockchain presents significant technical challenges. In this post, I'll walk you through my implementation of a comprehensive Bitcoin Ordinals Index that extends Bitcoin Core to efficiently track, store, and query ordinal movements across the entire blockchain.
@@ -321,5 +319,4 @@ The combination of pruning options, inscription detection, and flexible RPC inte
 Whether you're building an ordinal explorer, developing trading tools, or conducting blockchain research, this index provides the reliable, efficient access to ordinal data that these applications require.
 
 ---
-
-*This implementation is part of ongoing research into Bitcoin scalability and novel use cases. Contributions and feedback are welcome at the project repository.*
+-assisted writing with ChatGPT in GitHub Co-Pilot
