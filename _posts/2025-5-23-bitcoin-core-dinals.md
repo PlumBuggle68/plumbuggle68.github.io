@@ -16,7 +16,6 @@ The Ordinals Index is a custom extension to Bitcoin Core that maintains a comple
 - Track the complete history of any satoshi from its creation to current location
 - Query which transaction output currently holds a specific ordinal
 - Find all historical locations of a given ordinal
-- Efficiently process ordinal inscriptions and transfers
 
 ## How It Works: The Technical Architecture
 
@@ -81,23 +80,6 @@ The index uses LevelDB (via Bitcoin Core's database abstraction) with a key-valu
 - **Keys**: `(DB_ORDINDEX, (txid, vout))` - Uniquely identifies each transaction output
 - **Values**: `TxOutputSatoshiEntry` - Contains the satoshi ranges and metadata
 - **Special Key**: `(DB_ORDINDEX, "lastordinal")` - Tracks the highest ordinal number
-
-### Inscription Detection
-
-The index includes smart inscription detection that scans for OP_RETURN outputs containing the "ord" tag:
-
-```cpp
-static bool TransactionContainsOrdinals(const CTransactionRef& tx) {
-    for (const auto& txout : tx->vout) {
-        const CScript& scriptPubKey = txout.scriptPubKey;
-        if (scriptPubKey.size() > 0 && scriptPubKey[0] == OP_RETURN) {
-            // Parse OP_RETURN data looking for "ord" tag
-            // ... inscription detection logic
-        }
-    }
-    return false;
-}
-```
 
 ## RPC Commands: Powerful Query Interface
 
@@ -194,9 +176,6 @@ The index is controlled by several command-line arguments:
 
 ### Range-Based Storage
 Instead of storing individual satoshis, the index uses ranges to dramatically reduce storage requirements and improve query performance.
-
-### Inscription Detection
-The optional inscription detection helps identify transactions that actually contain ordinal transfers, potentially allowing for optimized processing.
 
 ### Pruning Options
 The pruning feature allows users to trade historical completeness for reduced storage requirements.
@@ -314,7 +293,7 @@ Several improvements could further enhance the index:
 
 The Bitcoin Ordinals Index represents a significant step forward in making ordinal data accessible and queryable. By combining efficient range-based storage with comprehensive tracking algorithms, it provides the foundation for a new generation of Bitcoin applications that work with individual satoshis.
 
-The combination of pruning options, inscription detection, and flexible RPC interfaces makes it suitable for both research applications requiring complete historical data and production systems needing current state information.
+The combination of pruning options and flexible RPC interfaces makes it suitable for both research applications requiring complete historical data and production systems needing current state information.
 
 Whether you're building an ordinal explorer, developing trading tools, or conducting blockchain research, this index provides the reliable, efficient access to ordinal data that these applications require.
 
