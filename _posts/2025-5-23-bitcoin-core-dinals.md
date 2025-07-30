@@ -7,7 +7,7 @@ Ordinals In Bitcoin Core
 
 ## Introduction
 
-Ordinal theory has changed the way people think about satoshi's. The ability to track and value the most atomic measurement of bitcoin. Ordinals allow for the dream of "NFTs for Bitcoin" to be realized. However, the tracking of these Ordinals presents significant technical challanges and bottle-necks. Most Ordindal indexers run on rust or are difficult to link to a node. By adding an Ordinal indexer to bitcoin core, people will be able to index their hearts away.
+Ordinal theory has changed the way people think about satoshis. The ability to track and value the most atomic measurement of bitcoin. Ordinals allow for the dream of "NFTs for Bitcoin" to be realized. However, the tracking of these Ordinals presents significant technical challenges and bottlenecks. Most Ordinal indexers either run on Rust or are difficult to set up and require linking to Bitcoin Core. By adding an Ordinal indexer to bitcoin core, people will be able to index their hearts away without the need for excessive dependencies separate libraries.
 
 ## What is the Ordinals Index?
 
@@ -72,7 +72,7 @@ for (size_t vout_index = 0; vout_index < tx->vout.size(); ++vout_index) {
     m_db->WriteOrdinalRanges(tx->GetHash(), vout_index, entry);
 }
 
-// The skim ranges function returns a pair of satoshi range vectors, the first is the ranged that have been skimmed. The second is the remaining pool. :)
+// The skim ranges function returns a pair of satoshi range vectors, the first is the ranges that have been skimmed. The second is the remaining pool. :)
 
 ```
 
@@ -295,12 +295,12 @@ Several improvements could further enhance the index:
 ## Challanges of Development
 
 ### Why not recursive query?
-  In early stages of development it became clear thaat a recursive query would not be the best option for the indexer. The underlying issue is that coinbase transactions contain fees from the last block. Every time the recursive function ran into a coinbase, it would have to query all of the transactions in the last block. Pulling sat ranges for coinbases from an api or similar is obviously a no go so recording a DB seemed to be the obvois option.
+  In early stages of development it became clear that a recursive query would not be the best option for the indexer. The underlying issue is that coinbase transactions contain fees from the last block. Every time the recursive function ran into a coinbase, it would have to query all of the transactions in the last block. Pulling sat ranges for coinbases from an api or similar is obviously a no go so recording a DB seemed to be the obvious option.
 
 ### Why not recursive pruning?
-  As I developed the indexer on testnet, I realized that if I didn't add a pruning option, my laptop would explode. Initialy, the idea was that I could recursivly prune back through a tree of transactions after one was spent. But when I began implementing it, I realized that it would be innefficient. In the future, it's possible I add recursive pruning as an option because it allows pruning to be enabled without a reindex. (See amazing cool drawing) Instead I decided to choose the simplest option. Currently, pruning mode caches pointers to spent transaction in the DB, then erases them after 6 blocks of confermation (Protection against re-org? May need changes...)
+  As I developed the indexer on testnet, I realized that if I didn't add a pruning option, my laptop would explode. Initially, the idea was that I could recursively prune back through a tree of transactions after one was spent. But when I began implementing it, I realized that it would be inefficient. In the future, it's possible I add recursive pruning as an option because it allows pruning to be enabled without a reindex. (See amazing cool drawing) Instead I decided to choose the simplest option. Currently, pruning mode caches pointers to spent transaction in the DB, then erases them after 6 blocks of confirmation (Protection against re-org? May need changes...)
 
-![](<../images/recursive_pruning.jpg>)
+![](<../images/recursive_pruning.png>)
 
 ## Conclusion
 
