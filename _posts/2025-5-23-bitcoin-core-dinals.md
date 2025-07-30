@@ -7,13 +7,13 @@ Ordinals In Bitcoin Core
 
 ## Introduction
 
-Bitcoin Ordinals have revolutionized how we think about individual satoshis, treating each one as a unique, trackable unit with its own history and identity. However, tracking ordinals across the Bitcoin blockchain presents significant technical challenges. In this post, I'll walk you through my implementation of a comprehensive Bitcoin Ordinals Index that extends Bitcoin Core to efficiently track, store, and query ordinal movements across the entire blockchain.
+Ordinal theory has changed the way people think about satoshi's. The ability to track and value the most atomic measurement of bitcoin. Ordinals allow for the dream of "NFTs for Bitcoin" to be realized. However, the tracking of these Ordinals presents significant technical challanges and bottle-necks. Most Ordindal indexers run on rust or are difficult to link to a node. By adding an Ordinal indexer to bitcoin core, people will be able to index their hearts away.
 
 ## What is the Ordinals Index?
 
-The Ordinals Index is a custom extension to Bitcoin Core that maintains a complete database of satoshi movements, allowing you to:
+The Ordinals Index is an extension to Bitcoin Core that maintains a complete or partial database of satoshi movements, allowing you to:
 
-- Track the complete history of any satoshi from its creation to current location
+- Find the satoshi's in a given outpoint
 - Query which transaction output currently holds a specific ordinal
 - Find all historical locations of a given ordinal
 
@@ -21,7 +21,7 @@ The Ordinals Index is a custom extension to Bitcoin Core that maintains a comple
 
 ### Core Data Structures
 
-The index is built around several key data structures:
+The index is built around a couple key data structures:
 
 ```cpp
 struct SatoshiRange {
@@ -37,13 +37,13 @@ struct TxOutputSatoshiEntry {
 };
 ```
 
-Each transaction output is associated with one or more `SatoshiRange` objects that define which ordinals it contains. This range-based approach is crucial for efficiency - instead of tracking millions of individual satoshis, we track contiguous ranges.
+Each transaction output is associated with a vector of `SatoshiRange` objects that define which ordinals it contains. This range-based approach is common in indexers as it allows a representation of a range without needing to store millions of satoshi numbers in the DB.
 
 ### The Satoshi Flow Algorithm
 
 The heart of the index is the `CustomAppend` function, which processes each block and tracks satoshi movements:
 
-1. **Input Pooling**: For each transaction, collect all satoshi ranges from input transaction outputs
+1. **Input Pooling**: For each transaction, collect all satoshi ranges from the inputs of a transaction
 2. **Output Assignment**: Distribute pooled satoshis to outputs using the "first-in-first-out" principle
 3. **Fee Calculation**: Remaining satoshis become transaction fees
 4. **Coinbase Processing**: New satoshis are minted and combined with collected fees
@@ -71,17 +71,20 @@ for (size_t vout_index = 0; vout_index < tx->vout.size(); ++vout_index) {
     TxOutputSatoshiEntry entry{assigned.first, block_height};
     m_db->WriteOrdinalRanges(tx->GetHash(), vout_index, entry);
 }
+
+// The skim ranges function returns a pair of satoshi range vectors, the first is the ranged that have been skimmed. The second is the remaining pool. :)
+
 ```
 
 ### Database Design
 
-The index uses LevelDB (via Bitcoin Core's database abstraction) with a key-value structure:
+The index uses LevelDB with a key-value structure:
 
 - **Keys**: `(DB_ORDINDEX, (txid, vout))` - Uniquely identifies each transaction output
 - **Values**: `TxOutputSatoshiEntry` - Contains the satoshi ranges and metadata
 - **Special Key**: `(DB_ORDINDEX, "lastordinal")` - Tracks the highest ordinal number
 
-## RPC Commands: Powerful Query Interface
+## RPC Commands: Query Interface
 
 The index exposes three main RPC commands for querying ordinal data:
 
@@ -108,7 +111,7 @@ bitcoin-cli getordinalbytxoutput "txid" 0
 
 ### 2. `gettxoutputsbyordinal`
 
-**Purpose**: Find all transaction outputs (historical and current) that contain a specific ordinal
+**Purpose**: Find all transaction outputs (historical and current) that contain a specific ordinal ( Slow )
 
 **Usage**:
 ```bash
@@ -133,7 +136,7 @@ bitcoin-cli gettxoutputsbyordinal 123456789
 
 ### 3. `getordinalposition`
 
-**Purpose**: Get the current (most recent unspent) location of a specific ordinal
+**Purpose**: Get the current (most recent unspent) location of a specific ordinal ( Requires "ordindexrewritespent" )
 
 **Usage**:
 ```bash
@@ -286,8 +289,18 @@ Several improvements could further enhance the index:
 
 - **Incremental Updates**: More efficient handling of blockchain reorganizations
 - **Query Optimization**: Secondary indexes for common query patterns
-- **Compression**: More efficient storage of range data
 - **API Extensions**: Additional query methods and filtering options
+- **Inscription Detection**
+
+## Challanges of Development
+
+### Why not recursive query?
+  In early stages of development it became clear thaat a recursive query would not be the best option for the indexer. The underlying issue is that coinbase transactions contain fees from the last block. Every time the recursive function ran into a coinbase, it would have to query all of the transactions in the last block. Pulling sat ranges for coinbases from an api or similar is obviously a no go so recording a DB seemed to be the obvois option.
+
+### Why not recursive pruning?
+  As I developed the indexer on testnet, I realized that if I didn't add a pruning option, my laptop would explode. Initialy, the idea was that I could recursivly prune back through a tree of transactions after one was spent. But when I began implementing it, I realized that it would be innefficient. In the future, it's possible I add recursive pruning as an option because it allows pruning to be enabled without a reindex. (See amazing cool drawing) Instead I decided to choose the simplest option. Currently, pruning mode caches pointers to spent transaction in the DB, then erases them after 6 blocks of confermation (Protection against re-org? May need changes...)
+
+![](<../images/recursive_pruning.jpg>)
 
 ## Conclusion
 
@@ -298,4 +311,4 @@ The combination of pruning options and flexible RPC interfaces makes it suitable
 Whether you're building an ordinal explorer, developing trading tools, or conducting blockchain research, this index provides the reliable, efficient access to ordinal data that these applications require.
 
 ---
--assisted writing with ChatGPT in GitHub Co-Pilot
+
