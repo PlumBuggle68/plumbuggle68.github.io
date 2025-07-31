@@ -88,30 +88,40 @@ The index uses LevelDB with a key-value structure:
 
 The index exposes three main RPC commands for querying ordinal data:
 
-### 1. `getordinalbytxoutput`
+### 1. `getordinalrangesbytxoutput`
 
 **Purpose**: Get all ordinal ranges contained in a specific transaction output
 
 **Usage**:
 ```bash
-bitcoin-cli getordinalbytxoutput "txid" 0
+bitcoin-cli getordinalrangesbytxoutput "txid" 0
 ```
 
 **Response**:
 ```json
-[
-  {
-    "start": "123456789",
-    "end": "123456889"
-  }
-]
+{
+  "ranges": [
+    {
+      "start": "123456789",
+      "end": "123456889"
+    }
+  ],
+  "spent": false,
+  "inscription": false,
+  "block_height": 123456
+}
 ```
 
-**Implementation**: Directly queries the database using the transaction ID and output index as the key.
+**Implementation**: Directly queries the database using the transaction ID and output index as the key. Returns comprehensive metadata including spent status, inscription presence, and block height.
+
+**Error Handling**:
+- Invalid txid format (length != 64, non-hex characters): `RPC_INVALID_PARAMETER` (-8)
+- Invalid vout (negative values): `RPC_INVALID_PARAMETER` (-8)
+- Ordinal index not available: `RPC_METHOD_NOT_FOUND` (-32601)
 
 ### 2. `gettxoutputsbyordinal`
 
-**Purpose**: Find all transaction outputs (historical and current) that contain a specific ordinal ( Slow )
+**Purpose**: Find all transaction outputs (historical and current) that contain a specific ordinal
 
 **Usage**:
 ```bash
@@ -132,7 +142,11 @@ bitcoin-cli gettxoutputsbyordinal 123456789
 ]
 ```
 
-**Implementation**: Iterates through the entire database, checking if the specified ordinal falls within any stored range.
+**Implementation**: Iterates through the entire database, checking if the specified ordinal falls within any stored range. Returns all historical locations of the ordinal.
+
+**Error Handling**:
+- Ordinal index not available: `RPC_METHOD_NOT_FOUND` (-32601)
+- Function execution error: `RPC_INVALID_ADDRESS_OR_KEY` (-5)
 
 ### 3. `getordinalposition`
 
@@ -151,7 +165,12 @@ bitcoin-cli getordinalposition 123456789
 }
 ```
 
-**Implementation**: Similar to `gettxoutputsbyordinal` but only returns unspent outputs and uses sorting to find the most recent transaction.
+**Implementation**: Similar to `gettxoutputsbyordinal` but only returns unspent outputs. Requires the `--ordindexrewritespent` option to be enabled.
+
+**Error Handling**:
+- Ordinal index rewrite spent not enabled: `RPC_INVALID_PARAMETER` (-8)
+- Ordinal index not available: `RPC_METHOD_NOT_FOUND` (-32601)
+- Ordinal not found or function error: `RPC_INVALID_ADDRESS_OR_KEY` (-5)
 
 ## Command Line Arguments
 
@@ -232,7 +251,7 @@ Once synced, you can start querying:
 bitcoin-cli getordinalposition 50000000
 
 # Get all satoshis in the genesis block coinbase
-bitcoin-cli getordinalbytxoutput "4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b" 0
+bitcoin-cli getordinalrangesbytxoutput "4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b" 0
 
 # Find all historical locations of a specific ordinal
 bitcoin-cli gettxoutputsbyordinal 123456789
@@ -255,6 +274,12 @@ bitcoin-cli getrawtransaction $TXID true
 ```bash
 # Get complete history of a satoshi
 bitcoin-cli gettxoutputsbyordinal 123456789 | jq -r '.[] | "\(.txid):\(.vout)"'
+```
+
+**Examine ordinal ranges in detail**:
+```bash
+# Get detailed information about ordinal ranges in a transaction output
+bitcoin-cli getordinalrangesbytxoutput "txid" 0 | jq '.ranges[] | "Ordinal \(.start) to \(.end)"'
 ```
 
 ## Performance Considerations
