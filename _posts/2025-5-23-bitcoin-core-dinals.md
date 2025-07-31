@@ -7,11 +7,32 @@ Ordinals In Bitcoin Core
 
 ## Introduction
 
-Ordinal theory has changed the way people think about satoshis. The ability to track and value the most atomic measurement of bitcoin. Ordinals allow for the dream of "NFTs for Bitcoin" to be realized. However, the tracking of these Ordinals presents significant technical challenges and bottlenecks. Most Ordinal indexers either run on Rust or are difficult to set up and require linking to Bitcoin Core. By adding an Ordinal indexer to bitcoin core, people will be able to index their hearts away without the need for excessive dependencies separate libraries.
+Ordinal theory has changed the way people think about satoshis by enabling them to be individually tracked and valued. This makes the vision of "NFTs on Bitcoin" possible. However, indexing Ordinals currently presents significant technical challenges. Most existing indexers come with excessive dependencies and don’t operate their own full nodes. By integrating an Ordinal indexer directly into Bitcoin Core, the need for external dependencies is reduced, the indexer can interface seamlessly with the most widely used node software, and the result will be a more accessible and open-source solution.
+
+## What are Ordinals?
+Ordinals are a method of assigning unique identities to individual satoshis, the smallest units of bitcoin. This allows each satoshi to be tracked, transferred, and inscribed with data, such as images or text—effectively enabling NFTs on the Bitcoin blockchain.
+
+[https://docs.ordinals.com]
+
+Ordinal theory defines multiple ways to reference Ordinals:
+
+```
+Integer notation: 2099994106992659 The ordinal number, assigned according to the order in which the satoshi was mined.
+
+Decimal notation: 3891094.16797 The first number is the block height in which the satoshi was mined, the second the offset of the satoshi within the block.
+
+Degree notation: 3°111094′214″16797‴. We'll get to that in a moment.
+
+Percentile notation: 99.99971949060254% . The satoshi's position in Bitcoin's supply, expressed as a percentage.
+
+Name: satoshi. An encoding of the ordinal number using the characters a through z.
+```
+
+For context, my indexer tracks and refers to Ordinals by their "Integer Notation" which is the most common way to reference them.
 
 ## What is the Ordinals Index?
 
-The Ordinals Index is an extension to Bitcoin Core that maintains a complete or partial database of satoshi movements, allowing you to:
+The Ordinals Index is an addition to Bitcoin Core that maintains a complete or partial database of satoshi movements, allowing you to:
 
 - Find the satoshi's in a given outpoint
 - Query which transaction output currently holds a specific ordinal
@@ -19,9 +40,9 @@ The Ordinals Index is an extension to Bitcoin Core that maintains a complete or 
 
 ## How It Works: The Technical Architecture
 
-### Core Data Structures
+### Data Structures
 
-The index is built around a couple key data structures:
+The index is built around a couple data structures:
 
 ```cpp
 struct SatoshiRange {
@@ -37,7 +58,7 @@ struct TxOutputSatoshiEntry {
 };
 ```
 
-Each transaction output is associated with a vector of `SatoshiRange` objects that define which ordinals it contains. This range-based approach is common in indexers as it allows a representation of a range without needing to store millions of satoshi numbers in the DB.
+Each transaction output is associated with a vector of `SatoshiRange`s that define which ordinals it contains. This range-based approach is common in indexers as it allows a representation of a range without needing to store millions of satoshi numbers in the DB.
 
 ### The Satoshi Flow Algorithm
 
@@ -323,17 +344,15 @@ Several improvements could further enhance the index:
   In early stages of development it became clear that a recursive query would not be the best option for the indexer. The underlying issue is that coinbase transactions contain fees from the last block. Every time the recursive function ran into a coinbase, it would have to query all of the transactions in the last block. Pulling sat ranges for coinbases from an api or similar is obviously a no go so recording a DB seemed to be the obvious option.
 
 ### Why not recursive pruning?
-  As I developed the indexer on testnet, I realized that if I didn't add a pruning option, my laptop would explode. Initially, the idea was that I could recursively prune back through a tree of transactions after one was spent. But when I began implementing it, I realized that it would be inefficient. In the future, it's possible I add recursive pruning as an option because it allows pruning to be enabled without a reindex. (See amazing cool drawing) Instead I decided to choose the simplest option. Currently, pruning mode caches pointers to spent transaction in the DB, then erases them after 6 blocks of confirmation (Protection against re-org? May need changes...)
+  As I developed the indexer on testnet, I realized that if I didn't add a pruning option, my laptop would explode. Initially, the idea was that I could recursively prune back through parent transactions after an output was spent. But when I began implementing it, I realized that it would be inefficient. In the future, it's possible I add recursive pruning as an option because it allows pruning to be enabled without a reindex. (See amazing cool drawing) Instead I decided to choose the simplest option. Currently, pruning mode caches pointers to spent transaction in the DB, then erases them after 6 blocks of confirmation (Protection against re-org? May need changes...)
 
 ![](<../images/recursive_pruning.png>)
 
 ## Conclusion
 
-The Bitcoin Ordinals Index represents a significant step forward in making ordinal data accessible and queryable. By combining efficient range-based storage with comprehensive tracking algorithms, it provides the foundation for a new generation of Bitcoin applications that work with individual satoshis.
+The Bitcoin Ordinals Index represents a significant step forward in making ordinal data accessible and queryable.
 
-The combination of pruning options and flexible RPC interfaces makes it suitable for both research applications requiring complete historical data and production systems needing current state information.
-
-Whether you're building an ordinal explorer, developing trading tools, or conducting blockchain research, this index provides the reliable, efficient access to ordinal data that these applications require.
+The combination of pruning options and RPC interfaces makes it suitable for research applications requiring complete historical data, hobby projects for goofy inscriptions, and production systems needing current state information.
 
 ---
 
